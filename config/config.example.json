@@ -1,0 +1,18 @@
+{
+ "idioma": "pt",
+ "limite_segundos": 170,
+ "duracao_min": 15,
+ "bloco_minutos": 12,
+ "modelo_escuta": "large-v3",
+ "modelo_legenda": "medium",
+ "voz": {
+  "motor": "voicestudio",
+  "nome": "MinhaVoz",
+  "url": "http://127.0.0.1:3900/mcp/",
+  "steps": 32,
+  "velocidade": 1.05,
+  "reserva": "pt-BR-AntonioNeural"
+ },
+ "legenda": {"fonte": "Arial Black", "tamanho": 78, "cor_destaque": "#FFD23F"},
+ "dll_cuda_extra": []
+}

@@ -1,0 +1,9 @@
+faster-whisper>=1.1
+av>=11,<16            # o faster-whisper 1.2 quebra com o PyAV 16+
+opencv-python-headless>=4.8
+numpy>=1.26
+soundfile>=0.12
+yt-dlp[default]>=2025.1
+edge-tts>=6.1         # voz de rascunho (não comercial)
+google-api-python-client>=2.100
+google-auth-oauthlib>=1.2

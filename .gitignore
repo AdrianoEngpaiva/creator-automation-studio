@@ -1,0 +1,25 @@
+# credenciais e dados pessoais: nunca no repositório
+segredos/
+client_secret*.json
+token*.json
+config.json
+contas.json
+.env
+
+# dados de trabalho e saídas
+trabalho/
+saida/
+modelos/
+*.mp4
+*.mov
+*.wav
+*.mp3
+*.m4a
+*.webm
+*.onnx
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/

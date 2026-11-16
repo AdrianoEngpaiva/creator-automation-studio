@@ -1,0 +1,26 @@
+{
+ "cortes": {
+  "canal_youtube": "Nome exato do canal de cortes",
+  "tiktok": "@seu_tiktok_de_cortes",
+  "perfil_chrome": "Cortes",
+  "formato": "shorts",
+  "categoria": 20,
+  "hashtags_fixas": ["#shorts"]
+ },
+ "animacoes": {
+  "canal_youtube": "Nome exato do canal de animações",
+  "tiktok": "@seu_tiktok_de_animacoes",
+  "perfil_chrome": "Animacoes",
+  "formato": "shorts",
+  "categoria": 1,
+  "hashtags_fixas": []
+ },
+ "pessoal": {
+  "canal_youtube": "Nome exato do canal pessoal",
+  "tiktok": "@seu_tiktok",
+  "perfil_chrome": "Pessoal",
+  "formato": "longo",
+  "categoria": 22,
+  "hashtags_fixas": []
+ }
+}
