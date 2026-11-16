@@ -3,14 +3,19 @@
 **Da live de 4 horas ao Short publicado, rodando numa máquina local, com um agente de IA (Claude Code) fazendo a
 parte editorial e Python + FFmpeg fazendo o resto.**
 
-Pipeline de automação de conteúdo que eu uso em três canais (cortes de GTA 6, animação e canal pessoal), cada um com
-YouTube e TikTok. Ele encontra as lives do dia, escuta tudo localmente, escolhe os melhores momentos, monta o corte
-vertical com legenda palavra por palavra e narração com voz clonada, e publica no canal certo.
+Duas automações que eu uso nos meus canais:
 
-> *English summary:* an end-to-end, local-first content pipeline. It finds long livestreams, transcribes them on the
-> GPU, lets an LLM agent rank the moments, renders 9:16 clips (facecam on top, gameplay below, word-level captions,
-> cloned-voice narration with audio ducking) and uploads them through the YouTube Data API to the right channel —
-> with human approval gates before rendering and publishing.
+1. **Cortes de GTA 6 (canal de cortes):** encontra as lives do dia, escuta tudo localmente, escolhe os melhores
+   momentos, monta o corte vertical com legenda palavra por palavra e narração com voz clonada.
+2. **Postagem (todos os meus canais):** publica no YouTube o vídeo pronto, conferindo que está no canal certo.
+   Meus três canais (cortes, animação e pessoal) usam a mesma postagem. Os vídeos de animação e do canal pessoal são
+   produzidos à parte, a partir da minha narração, cada um no seu estilo; aqui eles só entram na hora de postar.
+
+> *English summary:* a local-first pipeline that turns long GTA 6 livestreams into Shorts — it finds today's streams,
+> transcribes them on the GPU, lets an LLM agent rank the moments, and renders 9:16 clips (facecam on top, gameplay
+> below, word-level captions, cloned-voice narration with audio ducking). A separate publishing module uploads
+> finished videos from any of my channels through the YouTube Data API, always checking it is the right channel,
+> with a human approval gate before anything goes public.
 
 ---
 

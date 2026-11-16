@@ -1,7 +1,8 @@
 """Onde ficam os dados, a configuração e os segredos. Nada pessoal fica no código.
 
 Tudo sai de variáveis de ambiente ou de `<CAS_HOME>/config.json` (veja config/config.example.json):
-  CAS_HOME   pasta de trabalho (padrão: ~/creator-automation-studio)
+  CAS_HOME      pasta de trabalho (padrão: ~/creator-automation-studio)
+  CAS_TRABALHO  CAS_SAIDA  CAS_SEGREDOS  CAS_CONTAS   para separar cada pasta, se quiser
 """
 import glob
 import json
@@ -10,8 +11,8 @@ import sys
 from pathlib import Path
 
 HOME = Path(os.environ.get("CAS_HOME", Path.home() / "creator-automation-studio"))
-TRABALHO = HOME / "trabalho"     # áudio, transcrição, blocos e trechos de cada fonte
-SAIDA = HOME / "saida"           # vídeos prontos + .txt de postagem
+TRABALHO = Path(os.environ.get("CAS_TRABALHO", HOME / "trabalho"))  # áudio, transcrição, blocos e trechos
+SAIDA = Path(os.environ.get("CAS_SAIDA", HOME / "saida"))            # vídeos prontos + .txt de postagem
 MODELOS = HOME / "modelos"       # detector de rosto
 SEGREDOS = Path(os.environ.get("CAS_SEGREDOS", HOME / "segredos"))  # credencial OAuth e tokens
 CONFIG = HOME / "config.json"

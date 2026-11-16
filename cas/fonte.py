@@ -36,20 +36,34 @@ def pasta_da_fonte(url_ou_nome):
     return None
 
 
+def eh_local(info):
+    return bool(info.get("local"))
+
+
+def metadados_locais(caminho):
+    from .util import sondar
+    p = Path(caminho).resolve()
+    return {"id": slug(p.stem), "title": p.stem, "uploader": "", "duration": sondar(p)["dur"], "url": str(p),
+            "local": True}
+
+
 def preparar_pasta(url):
     existente = pasta_da_fonte(url)
     if existente:
         return existente
-    info = metadados(url)
-    pasta = TRABALHO / slug(f"{info.get('uploader') or 'fonte'}-{info.get('title') or info['id']}")
+    info = metadados_locais(url) if Path(url).is_file() else metadados(url)
+    nome = info["title"] if eh_local(info) else f"{info.get('uploader') or 'fonte'}-{info.get('title') or info['id']}"
+    pasta = TRABALHO / slug(nome)
     pasta.mkdir(parents=True, exist_ok=True)
     gravar_json(pasta / "info.json", info)
     return pasta
 
 
 def baixar_audio(pasta):
+    info = ler_json(pasta / "info.json", {})
+    if eh_local(info):
+        return Path(info["url"])  # arquivo do disco: o ffmpeg tira o áudio direto dele
     if not list(pasta.glob("audio.*")):
-        info = ler_json(pasta / "info.json", {})
         rodar(ytdlp() + ["-f", "ba/b", "-x", "-o", str(pasta / "audio.%(ext)s"), info["url"]])
     return next(pasta.glob("audio.*"))
 
@@ -81,6 +95,10 @@ def baixar_trecho(pasta, ini, fim, destino):
     if destino.exists() and tem_imagem(destino):
         return destino
     info = ler_json(pasta / "info.json", {})
+    if eh_local(info):  # arquivo do disco: só recorta
+        rodar(["ffmpeg", "-v", "error", "-y", "-ss", f"{ini:.2f}", "-i", info["url"], "-t", f"{fim - ini:.2f}",
+               "-c:v", "libx264", "-preset", "veryfast", "-crf", "16", "-c:a", "aac", "-b:a", "192k", destino])
+        return destino
     subprocess.run(ytdlp() + ["-q", "-f", FORMATO_VIDEO, "--download-sections", f"*{ini:.2f}-{fim:.2f}",
                               "--force-keyframes-at-cuts", "--merge-output-format", "mp4", "-o", str(destino),
                               info["url"]], capture_output=True)

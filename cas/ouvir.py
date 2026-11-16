@@ -122,9 +122,22 @@ def escrever_blocos(pasta, trans, volume, chat, minutos=None):
     return feitos
 
 
+def folhas_de_quadros(pasta, passo=15):
+    """Para vídeo do disco (ex.: gameplay sem fala): folhas 6x5 com um quadro a cada `passo` s e o tempo escrito."""
+    info = ler_json(pasta / "info.json", {})
+    destino = pasta / "quadros"
+    if not info.get("local") or list(destino.glob("folha_*.jpg")):
+        return
+    destino.mkdir(exist_ok=True)
+    rodar(["ffmpeg", "-v", "error", "-y", "-i", info["url"], "-vf",
+           f"fps=1/{passo},scale=320:-2,drawtext=font=Arial:text='%{{pts\\:hms}}':x=6:y=6:fontsize=22:"
+           "fontcolor=yellow:box=1:boxcolor=black@0.6,tile=6x5", "-q:v", "4", destino / "folha_%02d.jpg"])
+
+
 def preparar(pasta, modelo=None, idioma=None):
-    print("[1/3] baixando só o áudio…")
+    print("[1/3] separando o áudio…")
     audio_16k(pasta)
+    folhas_de_quadros(pasta)
     print("[2/3] transcrevendo…")
     trans = transcrever(pasta, modelo, idioma)
     print("[3/3] marcando picos de volume e de chat…")

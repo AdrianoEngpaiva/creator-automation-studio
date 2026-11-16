@@ -121,8 +121,9 @@ def cortar(a):
         corte = {"id": cid, "titulo": m.get("titulo", ""), "fonte": str(trecho), "trechos": [[0, m["fim"] - m["ini"]]],
                  "camera": cam, "credito": f"@{autor}" if autor else "", "narracao": m.get("narracao", []),
                  "post": {"titulo": m.get("titulo_post") or frase(m.get("titulo", "")),
-                          "descricao": f"{(m.get('post') or '').strip()}\n\nCorte de {autor}: "
-                                       f"{info.get('webpage_url') or info.get('url')}",
+                          "descricao": (m.get("post") or "").strip() + (
+                              "" if info.get("local") else
+                              f"\n\nCorte de {autor}: {info.get('webpage_url') or info.get('url')}"),
                           "hashtags": m.get("hashtags", "#shorts")}}
         render_corte(corte, config.SAIDA / pasta.name, pasta / "render", voz)
     print(f"\npronto: {config.SAIDA / pasta.name}")
