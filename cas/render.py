@@ -49,6 +49,41 @@ def agrupar(palavras, max_palavras=3, max_dur=1.4):
     return grupos + ([atual] if atual else [])
 
 
+MAX_LETRAS_TITULO = 24  # cabe em 1080 px com a fonte do título (62 px, Arial Black)
+
+
+def quebrar_titulo(titulo, maximo=MAX_LETRAS_TITULO):
+    """Título longo vira duas linhas equilibradas (nunca corta nas laterais)."""
+    if len(titulo) <= maximo:
+        return [titulo]
+    palavras = titulo.split()
+    melhor = None
+    for i in range(1, len(palavras)):
+        a, b = " ".join(palavras[:i]), " ".join(palavras[i:])
+        custo = max(len(a), len(b))
+        if melhor is None or custo < melhor[0]:
+            melhor = (custo, a, b)
+    return [melhor[1], melhor[2]] if melhor else [titulo]
+
+
+def corrigir_volume(arquivo, alvo=-14.0, tolerancia=0.5):
+    """2ª passada: mede o loudness integrado e ajusta só o áudio (o vídeo é copiado)."""
+    r = subprocess.run(["ffmpeg", "-hide_banner", "-i", str(arquivo), "-af", "ebur128", "-f", "null", "-"],
+                       capture_output=True, text=True, encoding="utf-8", errors="replace")
+    m = re.findall(r"I:\s+(-?\d+(?:\.\d+)?) LUFS", r.stderr)
+    if not m:
+        return None
+    medido = float(m[-1])
+    if abs(medido - alvo) <= tolerancia:
+        return medido
+    ajustado = Path(arquivo).with_name(Path(arquivo).stem + "_vol.mp4")
+    rodar(["ffmpeg", "-v", "error", "-y", "-i", arquivo, "-map", "0", "-c:v", "copy", "-af",
+           f"volume={alvo - medido:.2f}dB,alimiter=limit=0.89:level=disabled", "-c:a", "aac", "-b:a", "192k",
+           "-ar", "48000", "-movflags", "+faststart", ajustado])
+    os.replace(ajustado, arquivo)
+    return medido
+
+
 def escrever_legenda(caminho, dur, titulo, credito, palavras, y_leg, y_tit=None):
     c = cfg()["legenda"]
     destaque = _cor_ass(c["cor_destaque"])
@@ -70,10 +105,13 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 """
     ev = []
     pos_t = f"\\an5\\pos({W // 2},{y_tit})" if y_tit else ""
+    linhas_tit = quebrar_titulo(titulo.upper()) if titulo else []
     if titulo:
-        ev.append(f"Dialogue: 2,{_t(0)},{_t(dur)},Tit,,0,0,0,,{{{pos_t}\\fad(150,0)}}{_limpo(titulo.upper())}")
+        ev.append(f"Dialogue: 2,{_t(0)},{_t(dur)},Tit,,0,0,0,,{{{pos_t}\\fad(150,0)}}"
+                  + "\\N".join(_limpo(l) for l in linhas_tit))
     if credito:
-        y_c = (y_tit + 75) if y_tit else 400
+        extra = 38 * (len(linhas_tit) - 1)  # o título em 2 linhas cresce para cima e para baixo da emenda
+        y_c = (y_tit + 75 + extra) if y_tit else 400 + 2 * extra
         ev.append(f"Dialogue: 2,{_t(0)},{_t(dur)},Cred,,0,0,0,,{{\\an8\\pos({W // 2},{y_c})}}{_limpo(credito)}")
     grupos = agrupar(palavras)
     for k, g in enumerate(grupos):
@@ -211,6 +249,7 @@ def render_corte(c, pasta_saida, tmp_raiz, voz=None, legendar_original=True, zoo
             "-pix_fmt", "yuv420p", "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709",
             "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-movflags", "+faststart", "-t", f"{dur:.3f}", temporario]
     rodar(cmd)
+    corrigir_volume(temporario)
     rodar(["ffmpeg", "-v", "error", "-i", temporario, "-f", "null", "-"])  # decodifica inteiro antes de liberar
     final = pasta_saida / f"{nome}.mp4"
     final.unlink(missing_ok=True)
