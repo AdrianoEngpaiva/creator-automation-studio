@@ -19,7 +19,7 @@ import sys
 from pathlib import Path
 
 from . import config
-from .util import gravar_json, ler_json
+from .util import gravar_json, ler_json, segundos
 
 SIGLAS = {"GTA", "RP", "PC", "PS5", "PS4", "NPC", "FPS", "VI", "V", "IV", "XBOX", "4K", "HD", "IA", "AI"}
 
@@ -80,7 +80,7 @@ def preparar(a):
     for link in a.links:
         pasta = preparar_pasta(link)
         print(f"\n== {pasta.name}")
-        prep(pasta, a.modelo, a.idioma)
+        prep(pasta, a.modelo, a.idioma, segundos(a.ate) if a.ate else None, segundos(a.de) if a.de else None)
 
 
 def _pasta(nome):
@@ -195,6 +195,8 @@ def main():
     p.add_argument("links", nargs="+")
     p.add_argument("--modelo")
     p.add_argument("--idioma")
+    p.add_argument("--de", help="começa a análise neste ponto da fonte, ex.: 3:00:00")
+    p.add_argument("--ate", help="termina a análise neste ponto da fonte, ex.: 4:30:00")
     p.set_defaults(f=preparar)
     e = sub.add_parser("escolher")
     e.add_argument("fonte")

@@ -16,10 +16,31 @@ from .util import gravar_json, hms, ler_json, rodar
 SR = 16000
 
 
-def audio_16k(pasta):
+def janela_analisada(pasta):
+    """(de, ate) em segundos da fonte original que o audio16k.wav cobre (None = começo/fim)."""
+    j = ler_json(pasta / "janela.json", {})
+    return j.get("de"), j.get("ate")
+
+
+def audio_16k(pasta, ate=None, de=None):
+    """WAV mono 16 kHz da fonte. `de`/`ate` (segundos) analisam só um trecho — útil em lives de muitas horas.
+    Os tempos de tudo que sai daqui (transcrição, picos, blocos) continuam sendo os da fonte original."""
     wav = pasta / "audio16k.wav"
+    pedido = {"de": float(de) if de else None, "ate": float(ate) if ate else None}
+    if wav.exists() and (de is not None or ate is not None):
+        atual = dict(zip(("de", "ate"), janela_analisada(pasta)))
+        if atual != pedido:  # mudou o trecho analisado: refaz o áudio e o que depende dele
+            wav.unlink()
+            for velho in ("transcricao.json", "transcricao.parcial.json", "volume.json"):
+                (pasta / velho).unlink(missing_ok=True)
+            for velho in list((pasta / "blocos").glob("*.txt")) if (pasta / "blocos").exists() else []:
+                velho.unlink()
     if not wav.exists():
-        rodar(["ffmpeg", "-v", "error", "-y", "-i", baixar_audio(pasta), "-ac", "1", "-ar", str(SR), wav])
+        corte = (["-ss", f"{pedido['de']:.0f}"] if pedido["de"] else []) + (
+            ["-t", f"{pedido['ate'] - (pedido['de'] or 0):.0f}"] if pedido["ate"] else [])
+        rodar(["ffmpeg", "-v", "error", "-y", *corte[:2], "-i", baixar_audio(pasta), *corte[2:], "-ac", "1",
+               "-ar", str(SR), wav])
+        gravar_json(pasta / "janela.json", pedido)
     return wav
 
 
@@ -37,17 +58,28 @@ def transcrever(pasta, modelo=None, idioma=None):
     c = cfg()
     x = carregar(audio_16k(pasta))
     m = whisper(modelo or c["modelo_escuta"])
-    segs, info = m.transcribe(x, language=idioma or c["idioma"], word_timestamps=True, vad_filter=True,
-                              beam_size=5, condition_on_previous_text=False)
-    out, t0, ultimo = [], time.time(), 0.0
-    for s in segs:
-        out.append({"ini": round(s.start, 2), "fim": round(s.end, 2), "texto": s.text.strip(),
-                    "palavras": [[w.word.strip(), round(w.start, 2), round(w.end, 2)] for w in (s.words or [])]})
-        if s.end - ultimo > 300:
-            ultimo = s.end
-            print(f"  {hms(s.end)} transcrito ({time.time() - t0:.0f}s)", flush=True)
-    dados = {"idioma": info.language, "duracao": info.duration, "segmentos": out}
+    # em pedaços: lives de 10 h não cabem na memória de uma vez (o espectrograma passa de 7 GB)
+    pedaco = 30 * 60 * SR
+    out, t0, lingua = [], time.time(), idioma or c["idioma"]
+    parcial = pasta / "transcricao.parcial.json"
+    feito = ler_json(parcial, {"ate": 0, "segmentos": []})
+    out = feito["segmentos"]
+    inicio = janela_analisada(pasta)[0] or 0.0
+    for ini in range(feito["ate"], len(x), pedaco):
+        desloc = inicio + ini / SR
+        segs, info = m.transcribe(x[ini:ini + pedaco], language=lingua, word_timestamps=True, vad_filter=True,
+                                  beam_size=5, condition_on_previous_text=False)
+        lingua = lingua or info.language
+        for s in segs:
+            out.append({"ini": round(s.start + desloc, 2), "fim": round(s.end + desloc, 2), "texto": s.text.strip(),
+                        "palavras": [[w.word.strip(), round(w.start + desloc, 2), round(w.end + desloc, 2)]
+                                     for w in (s.words or [])]})
+        gravar_json(parcial, {"ate": ini + pedaco, "segmentos": out})  # retomável se cair no meio
+        print(f"  {hms(inicio + min(len(x), ini + pedaco) / SR)} de {hms(inicio + len(x) / SR)} transcrito "
+              f"({time.time() - t0:.0f}s)", flush=True)
+    dados = {"idioma": lingua, "duracao": inicio + len(x) / SR, "segmentos": out}
     gravar_json(saida, dados)
+    parcial.unlink(missing_ok=True)
     return dados
 
 
@@ -67,7 +99,8 @@ def picos_de_volume(pasta, janela=150):
         base[i:i + 30] = np.median(trecho) if trecho.size else np.median(db)
     excesso = db - base
     limite = max(8.0, float(np.percentile(excesso, 98)))
-    picos = [[int(i), round(float(excesso[i]), 1)] for i in np.flatnonzero(excesso >= limite)]
+    inicio = int(janela_analisada(pasta)[0] or 0)
+    picos = [[inicio + int(i), round(float(excesso[i]), 1)] for i in np.flatnonzero(excesso >= limite)]
     gravar_json(saida, picos)
     return picos
 
@@ -134,9 +167,10 @@ def folhas_de_quadros(pasta, passo=15):
            "fontcolor=yellow:box=1:boxcolor=black@0.6,tile=6x5", "-q:v", "4", destino / "folha_%02d.jpg"])
 
 
-def preparar(pasta, modelo=None, idioma=None):
-    print("[1/3] separando o áudio…")
-    audio_16k(pasta)
+def preparar(pasta, modelo=None, idioma=None, ate=None, de=None):
+    trecho = f" (de {hms(de or 0)} até {hms(ate) if ate else 'o fim'})" if (de or ate) else ""
+    print("[1/3] separando o áudio…" + trecho)
+    audio_16k(pasta, ate, de)
     folhas_de_quadros(pasta)
     print("[2/3] transcrevendo…")
     trans = transcrever(pasta, modelo, idioma)

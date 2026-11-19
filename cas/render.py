@@ -118,6 +118,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         prox = grupos[k + 1][0][1] if k + 1 < len(grupos) else dur
         for i, (_, s, e) in enumerate(g):
             fim = g[i + 1][1] if i + 1 < len(g) else min(prox, max(e, s + 0.25) + 0.7)
+            if round(fim, 2) <= round(s, 2):
+                continue  # evento de duração zero: o libass some com o título inteiro quando encontra um desses
             txt = " ".join(f"{{\\c{destaque}\\fscx108\\fscy108}}{_limpo(w.upper())}{{\\c&HFFFFFF&\\fscx100\\fscy100}}"
                            if j == i else _limpo(w.upper()) for j, (w, _, _) in enumerate(g))
             pop = "\\t(0,80,\\fscx110\\fscy110)\\t(80,160,\\fscx100\\fscy100)" if i == 0 else ""
